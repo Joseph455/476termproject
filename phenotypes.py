@@ -1,3 +1,5 @@
+from typing import Any
+
 
 class Course:
     """Class representing cource phenotype."""
@@ -19,6 +21,14 @@ class Course:
     
     def __repr__(self) -> str:
         return self.__str__()
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert cource to dict format."""
+        return {
+            'code': self.code,
+            'required_periods': self.required_periods,
+            'students_population': self.students_population,
+        }
 
 
 class Day:
@@ -39,6 +49,14 @@ class Day:
 
     def __repr__(self) -> str:
         return self.__str__()
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert day to dict format."""
+        return {
+            'date': self.date,
+            'periods': self.periods,
+        }
+
 
 class Venue:
     """Class representing a venue phenotype."""
@@ -58,3 +76,10 @@ class Venue:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert venue to dict format."""
+        return {
+            'date': self.title,
+            'periods': self.capacity,
+        }

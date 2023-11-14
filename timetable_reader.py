@@ -5,7 +5,7 @@ from typing import Any
 from phenotypes import Course, Venue, Day
 from utils import TimeTable, find_phenotype_by_id
 from pprint import pprint
-
+import json 
 
 def _strip_spaces(value: str) -> str:
     """Strip all spaces from string"""
@@ -88,15 +88,30 @@ def read_timetable_data(
     return TimeTable(chromosome=chromosome, phenotype=phenotype), phenotype
 
 
+def convert_phenotype_to_json_format(phenotype: dict[str, list[Course | Venue | Day]])-> dict[str, Any]:
+    """Convert phenotype dict to json."""
+    return  {
+        'cources': [cource.to_dict() for cource in phenotype['cources']],
+        'days': [day.to_dict() for day in phenotype['days']],
+        'venues': [venue.to_dict() for venue in phenotype['venues']]
+    }
+
+
 
 if __name__ == '__main__':
-    file_name = '2022_2023_timetable.csv'
+    input_file_name = '2022_2023_timetable.csv'
+    output_file_name = '2022_2023_phenotype.json'
 
-    with open(file_name, mode='r') as csv_file:
+    with open(input_file_name, mode='r') as csv_file:
         reader = csv.DictReader(f=csv_file, fieldnames=['cource', 'day', 'venues', 'period'])
         timetable, phenotypes = read_timetable_data(reader)
 
         print(timetable.unfitness_score)
+
+    
+    with open(output_file_name, mode='w') as json_file:
+        content = convert_phenotype_to_json_format(phenotypes)
+        json_file.write(json.dumps(content))
         # pprint(timetable.chromosome)
         # pprint(phenotypes)
 
