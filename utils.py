@@ -8,10 +8,10 @@ class TimeTable:
     population_id: int = 1
     chromosome: dict[int, dict[int, dict[int, list[int]]]]
     unfitness_score: int = 0
+    diversity_score: int = 0  
 
     def __init__(self, chromosome: dict[int, dict[int, dict[int, list[int]]]], phenotype: Any) -> None:
         """Initialises a new timetable randomly or from chromosome."""
-        
         self.id = TimeTable.population_id
         TimeTable.population_id += 1
         self.chromosome = chromosome
@@ -19,8 +19,8 @@ class TimeTable:
 
     def __calcuate_fitness_score(self, phenotype) -> None:
         """Calculates the fitness score of the timetable."""
-        self.unfitness_score += check_hard_constraints(self, phenotype)
-
+        self.unfitness_score = check_hard_constraints(self, phenotype)
+  
     def __lt__(self, other: "TimeTable") -> bool:
         """Compares the fitness score of two timetables."""
         return self.unfitness_score > other.unfitness_score
@@ -34,10 +34,10 @@ class TimeTable:
         return self.unfitness_score == other.unfitness_score
 
     def __le__(self, other: "TimeTable"):
-        return self.unfitness_score <= other.unfitness_score
+        return self.unfitness_score >= other.unfitness_score
     
     def __ge__(self, other: "TimeTable"):
-        return self.unfitness_score >= other.unfitness_score
+        return self.unfitness_score <= other.unfitness_score
 
     def __str__(self) -> str:
         """Returns a string representation of the timetable."""

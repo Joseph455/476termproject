@@ -1,6 +1,8 @@
 import random
 from typing import Any
-from phenotypes import Venue, Course, Day 
+
+from phenotypes import Venue, Course, Day
+from timetable_reader import read_phenotypes_from_json 
 from utils import find_consequitive_integers, TimeTable, find_phenotype_by_id, rank_selection, tournament_selection, pick_center_third
 from pprint import pprint
 
@@ -9,7 +11,7 @@ from pprint import pprint
 class GATestRunner:
     """This is a test runner for our GA."""
     population: list[TimeTable] = []
-    max_population_size = 1000
+    max_population_size = 100
     max_number_of_generations = 10000
     local_optima_generation = 15
 
@@ -19,23 +21,26 @@ class GATestRunner:
     _no_of_days = 12
     _no_of_periods = 10
     _no_of_venues = 10
-    _mutation_probablity = 0.5
-    _rank_selection_probability = 0.5
+    _mutation_probablity = 0.1
     _tournament_size = 3
     _elite: TimeTable = None
+    # _rank_selection_probability = 0.2
 
-    _phenotype: dict[str, list[Course | Venue | Day]] 
+    _phenotype: dict[str, list[Course | Venue | Day]] = None
+
+    def __init__(self, phenotype: dict[str, list[Course | Venue | Day]]):
+        self._phenotype = phenotype
 
     def __perform_mutation(self, child: TimeTable) -> TimeTable:
         """Mutate a childs gene based on some  proberbility."""
 
-        if (random.randrange(1, 100) / 100) <= self._mutation_probablity:
-
+        if random.random() <= self._mutation_probablity:
             # swap cources 
             cources_to_mutate = random.choices(list(child.chromosome.keys()), k=2)
             child.chromosome[cources_to_mutate[0]], child.chromosome[cources_to_mutate[1]] = child.chromosome[cources_to_mutate[1]], child.chromosome[cources_to_mutate[0]]
 
-            # mututate day of random cource
+        # mututate day of random cource
+        if random.random() <= self._mutation_probablity:
             cource = random.choice(list(child.chromosome.keys()))
             day_to_swap_out = list(child.chromosome[cource].keys())[0]
             day_to_swap_to = random.choice([day.id for day in self._phenotype['days'] if day != day_to_swap_out])
@@ -43,6 +48,31 @@ class GATestRunner:
             if day_to_swap_to != day_to_swap_out:
                 child.chromosome[cource].update({day_to_swap_to: child.chromosome[cource][day_to_swap_out]})
                 child.chromosome[cource].pop(day_to_swap_out)
+
+        # swap venue of random cource, day
+        if random.random() <= self._mutation_probablity:
+            cource = random.choice(list(child.chromosome.keys()))
+            day = list(child.chromosome[cource].keys())[0]
+            venue_to_out = random.choice(list(child.chromosome[cource][day].keys()))
+            venue_to_swap_to = random.choice([venue.id for venue in self._phenotype['venues'] if venue != venue_to_out])
+            
+            if venue_to_swap_to != venue_to_out:
+                child.chromosome[cource][day].update({venue_to_swap_to: child.chromosome[cource][day][venue_to_out]})
+                child.chromosome[cource][day].pop(venue_to_out)
+        
+        # swap period of random cource, day
+        if random.random() <= self._mutation_probablity:
+            cource = random.choice(list(child.chromosome.keys()))
+            day = list(child.chromosome[cource].keys())[0]
+            venue = list(child.chromosome[cource][day].keys())[0]
+            period_to_swap_out = random.choice(child.chromosome[cource][day][venue])
+            day_phenotype: Day = find_phenotype_by_id(self._phenotype['days'], day)
+            period_to_swap_in = random.choice([period for period in day_phenotype.periods if period != period_to_swap_out])
+            
+            if period_to_swap_out != period_to_swap_in and period_to_swap_in:
+                child.chromosome[cource][day][venue].remove(period_to_swap_out)
+                child.chromosome[cource][day][venue].append(period_to_swap_in)
+        
 
     def __perform_crossover(self, parent_a: TimeTable, parent_b: TimeTable) -> list[TimeTable]:
         """Crossover parents from a mating pool using partially mapped crossover PMX."""
@@ -129,9 +159,9 @@ class GATestRunner:
         """Randomly generate intial population."""
 
         # before generating population we need to generate phenotype 
-        self._phenotype = self.__generate_phenotypes()
+        self._phenotype = self.__generate_phenotypes() if self._phenotype is None else self._phenotype
 
-        for i in range(self.max_population_size):
+        for _ in range(self.max_population_size):
             new_individual_chromosome = dict()
             for cource in self._phenotype['cources']:
 
@@ -245,6 +275,7 @@ class GATestRunner:
         pprint(best_individual.chromosome)
 
 if __name__ == '__main__':
-    runner = GATestRunner()
+    phenotype_data_set = read_phenotypes_from_json(file_name='2022_2023_phenotype.json')
+    runner = GATestRunner(phenotype=phenotype_data_set)
     runner.run()
 

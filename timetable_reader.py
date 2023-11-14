@@ -1,10 +1,7 @@
 import csv
-from os import read
-from termios import VMIN
 from typing import Any
 from phenotypes import Course, Venue, Day
-from utils import TimeTable, find_phenotype_by_id
-from pprint import pprint
+from utils import TimeTable
 import json 
 
 def _strip_spaces(value: str) -> str:
@@ -97,6 +94,19 @@ def convert_phenotype_to_json_format(phenotype: dict[str, list[Course | Venue | 
     }
 
 
+def read_phenotypes_from_json(file_name: str) -> dict[str, list[Course | Venue | Day]]:
+    """Read phenotype data from json file."""
+
+    with open(file_name, mode='r') as json_file:
+        phenotype_data = json.loads(json_file.read())
+
+    
+    return {
+        'cources': [Course(**cource_data) for cource_data in phenotype_data['cources']],
+        'venues': [Venue(**venue_data) for venue_data in phenotype_data['venues']],
+        'days': [Day(**day_data) for day_data in phenotype_data['days']]
+    }
+    
 
 if __name__ == '__main__':
     input_file_name = '2022_2023_timetable.csv'
@@ -112,6 +122,6 @@ if __name__ == '__main__':
     with open(output_file_name, mode='w') as json_file:
         content = convert_phenotype_to_json_format(phenotypes)
         json_file.write(json.dumps(content))
-        # pprint(timetable.chromosome)
+        print(timetable.chromosome)
         # pprint(phenotypes)
 

@@ -33,7 +33,7 @@ def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
 
                     # avoid schedule collisions
                     if f'{day_id}{venue_id}{period}' in collision_array:
-                        total_score += score
+                        total_score += score 
                     else :
                         collision_array.append(f'{day_id}{venue_id}{period}')
 

@@ -80,6 +80,6 @@ class Venue:
     def to_dict(self) -> dict[str, Any]:
         """Convert venue to dict format."""
         return {
-            'date': self.title,
-            'periods': self.capacity,
+            'title': self.title,
+            'capacity': self.capacity,
         }
