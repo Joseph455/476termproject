@@ -1,0 +1,79 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+
+
+{% block content %}
+
+<header>
+    <h1 class="text-left my-5">Dashboard</h1>
+</header>
+
+<div class="row">
+    <div class="col-sm-6 mb-3 mb-sm-0">
+        <div class="card shadow-sm">
+            <div class="card-header text-center fs-4 d-flex justify-content-between px-3">
+                <span class="fs-4">Datasets</span>
+                <a href="{% url 'scheduler:create_dataset' %}" class="btn btn-primary">New</a>
+            </div>
+            <div class="card-body overflow-auto" style="height: 60vh;">
+                {% if not datasets %}
+                <div class="h-100 w-100 d-flex text-center">
+                    <div class="mx-auto my-auto">
+                        <h1>Noting to display </h1>
+                        <p>You have not created any datasets click on the new button above to create a dataset</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% for dataset in datasets %}
+                <div class="card border rounded px-3 py-2 shadow-sm my-2" onclick="window.location.replace(`{% url 'scheduler:dataset_detail' dataset.pk %}`)">
+                    <div class="d-flex justify-content-between w-100 h-50">
+                        <p class="text-left">{{dataset.title}}</p>
+                    </div>
+                    <div class="d-flex text-muted justify-content-between w-100 h-50">
+                        <span class="d-flex justify-content-between">
+                            <p>{{dataset.cources.count}} cource{{ dataset.cources.count|pluralize:'s' }}</p>
+                            <p class="mx-3" >{{dataset.venues.count}} venue{{ dataset.venues.count|pluralize:'s' }}</p>
+                        </span>
+                        <p class="text-muted">created at: {{dataset.date_created}}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6">
+        <div class="card text-center shadow-sm mh-50">
+            <div class="card-header d-flex justify-content-between px-3">
+                <span class="fs-4">Schedules</span>
+                <a class="btn btn-primary">New</a>
+            </div>
+            <div class="card-body overflow-auto" style="height: 60vh;">
+                {% if not schedules %}
+                <div class="h-100 w-100 d-flex">
+                    <div class="mx-auto my-auto">
+                        <h1>Noting to display </h1>
+                        <p>You have not created any schedules click on the new button above to create a new schedule</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% for schedule in schedules %}
+                <div class="card border rounded px-3 py-2 shadow-sm my-2">
+                    <div class="d-flex justify-content-between w-100 h-50">
+                        <p class="text-left">{{schedule.title}}</p>
+                    </div>
+                    <div class="d-flex text-muted justify-content-between w-100 h-50">
+                        <p class="text-muted">created at: {{schedule.date_created}}</p>
+                        <span class="badge text-bg-success h-50">{{schedule.get_status_display}}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock content %}

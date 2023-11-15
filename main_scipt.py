@@ -11,18 +11,18 @@ from pprint import pprint
 class GATestRunner:
     """This is a test runner for our GA."""
     population: list[TimeTable] = []
-    max_population_size = 100
+    max_population_size = 1000
     max_number_of_generations = 10000
     local_optima_generation = 15
 
     _generation = 0
 
-    _no_of_cources = 180
+    _no_of_cources = 150
     _no_of_days = 12
-    _no_of_periods = 10
-    _no_of_venues = 10
-    _mutation_probablity = 0.1
-    _tournament_size = 3
+    _no_of_periods = 3
+    _no_of_venues = 20
+    _mutation_probablity = 0.8
+    _tournament_size = 2
     _elite: TimeTable = None
     # _rank_selection_probability = 0.2
 
@@ -206,7 +206,7 @@ class GATestRunner:
 
         for i in range(1, self._no_of_cources+1):
             phenotype['cources'].append(
-                Course(code=f'C{i}', students_population=random.randint(50, 100), required_periods=random.randint(1, 2))
+                Course(code=f'C{i}', students_population=random.randint(50, 100), required_periods=random.randint(1, 1))
             )
 
         for i in range(1, self._no_of_days+1):
@@ -275,7 +275,7 @@ class GATestRunner:
         pprint(best_individual.chromosome)
 
 if __name__ == '__main__':
-    phenotype_data_set = read_phenotypes_from_json(file_name='2022_2023_phenotype.json')
-    runner = GATestRunner(phenotype=phenotype_data_set)
+    # phenotype_data_set = read_phenotypes_from_json(file_name='2022_2023_phenotype.json')
+    runner = GATestRunner(phenotype=None)
     runner.run()
 

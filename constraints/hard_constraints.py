@@ -8,12 +8,10 @@ def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
     
     total_score = 0
     cource_ids_to_be_scheduled = [course.id for course in phenotype['cources']]
-    used_venues = set()
-
     collision_array = [] 
     
     # all papers must be scheduled
-    total_score += (len(cource_ids_to_be_scheduled) - len(individual.chromosome)) * score
+    total_score += (len(cource_ids_to_be_scheduled) - len(list(individual.chromosome.keys()))) * score
 
     for cource_id, cource_gene in individual.chromosome.items():
 
@@ -23,9 +21,7 @@ def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
         for day_id, day_gene in cource_gene.items():
             
             for venue_id, venue_gene in day_gene.items():
-
-                used_venues.add(venue_id)
-                
+               
                 for index, period in enumerate(venue_gene):
                     
                     # ensure periods are valid phenotype

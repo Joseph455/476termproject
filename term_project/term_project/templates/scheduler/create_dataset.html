@@ -1,0 +1,49 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+{% load crispy_forms_tags %}
+
+
+
+{% block content %}
+<header>
+    <h1 class="text-left my-5">Dataset Creation</h1>
+</header>
+
+
+<section>
+    <form class="create_dataset" method="post" enctype="multipart/form-data" action="{% url 'scheduler:create_dataset' %}">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+
+    <div class="my-3">
+        <div class="card w-50 w-">
+            <div class="card-body">
+                <h5 class="card-title">NOTE</h5>
+                <p class="card-text">csv file should be in this format.</p>
+                <table class="table">
+                    <thead>
+                      <tr>
+                        <th scope="col">cource_code</th>
+                        <th scope="col">population</th>
+                        <th>|</th>
+                        <th scope="col">venue_code</th>
+                        <th scope="col">examination_capacity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>CSC476</td>
+                        <td>63</td>
+                        <td>|</td>
+                        <td>KDLT</td>
+                        <td>30</td>
+                      </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
