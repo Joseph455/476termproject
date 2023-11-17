@@ -19,14 +19,14 @@
                 {% if not datasets %}
                 <div class="h-100 w-100 d-flex text-center">
                     <div class="mx-auto my-auto">
-                        <h1>Noting to display </h1>
+                        <h1>Nothing to display </h1>
                         <p>You have not created any datasets click on the new button above to create a dataset</p>
                     </div>
                 </div>
                 {% endif %}
 
                 {% for dataset in datasets %}
-                <div class="card border rounded px-3 py-2 shadow-sm my-2" onclick="window.location.replace(`{% url 'scheduler:dataset_detail' dataset.pk %}`)">
+                <div class="card border rounded px-3 py-2 shadow-sm my-2" onclick="window.location.assign(`{% url 'scheduler:dataset_detail' dataset.pk %}`)">
                     <div class="d-flex justify-content-between w-100 h-50">
                         <p class="text-left">{{dataset.title}}</p>
                     </div>
@@ -47,33 +47,52 @@
         <div class="card text-center shadow-sm mh-50">
             <div class="card-header d-flex justify-content-between px-3">
                 <span class="fs-4">Schedules</span>
-                <a class="btn btn-primary">New</a>
+                <a href="{% url 'scheduler:create_schedule' %}" class="btn btn-primary">New</a>
             </div>
             <div class="card-body overflow-auto" style="height: 60vh;">
                 {% if not schedules %}
-                <div class="h-100 w-100 d-flex">
-                    <div class="mx-auto my-auto">
-                        <h1>Noting to display </h1>
-                        <p>You have not created any schedules click on the new button above to create a new schedule</p>
+                    <div class="h-100 w-100 d-flex">
+                        <div class="mx-auto my-auto">
+                            <h1>Nothing to display </h1>
+                            <p>You have not created any schedules click on the new button above to create a new schedule</p>
+                        </div>
                     </div>
-                </div>
                 {% endif %}
                 {% for schedule in schedules %}
-                <div class="card border rounded px-3 py-2 shadow-sm my-2">
-                    <div class="d-flex justify-content-between w-100 h-50">
-                        <p class="text-left">{{schedule.title}}</p>
+                    <div class="card border rounded px-3 py-2 shadow-sm my-2"
+                        {% if schedule.status == schedule.SCHEDULE_STATUS_PROCESSING  %}
+                            onclick="window.location.assign(`{% url 'scheduler:schedule_monitor' schedule.pk %}`)"
+                        {% else %}
+                            onclick="window.location.assign(`{% url 'scheduler:schedule_result' schedule.pk %}`)"
+                        {% endif %}
+                    >
+                        <div class="d-flex justify-content-between w-100 h-50">
+                            <p class="text-left">{{schedule.title}}</p>
+                            <p class="text-muted">Dataset: {{schedule.dataset.title}}</p>
+                        </div>
+                        <div class="d-flex text-muted justify-content-between w-100 h-50">
+                            <p class="text-muted">created at: {{schedule.date_created}}</p>
+                            {% if schedule.status == schedule.SCHEDULE_STATUS_DONE %}
+                                <span class="badge rounded-pill text-bg-success h-50">{{schedule.get_status_display}}</span>
+                            {% elif schedule.status == schedule.SCHEDULE_STATUS_PROCESSING %}
+                                <span class="badge rounded-pill text-bg-light h-50">
+                                    {{schedule.get_status_display}}
+                                    <div class="spinner-border" role="status" style="width: 1rem; height: 1rem;">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </span>
+                            {% elif schedule.status == schedule.SCHEDULE_STATUS_STOPPED %}
+                                <span class="badge rounded-pill text-bg-danger h-50">{{schedule.get_status_display}}</span>
+                            {% elif schedule.status == schedule.SCHEDULE_STATUS_CANCLED %}
+                                <span class="badge rounded-pill text-bg-dark h-50">{{schedule.get_status_display}}</span>
+                            {% endif %}
+              
+                        </div>
                     </div>
-                    <div class="d-flex text-muted justify-content-between w-100 h-50">
-                        <p class="text-muted">created at: {{schedule.date_created}}</p>
-                        <span class="badge text-bg-success h-50">{{schedule.get_status_display}}</span>
-                    </div>
-                </div>
                 {% endfor %}
             </div>
         </div>
-
     </div>
-
 </div>
 
 {% endblock content %}

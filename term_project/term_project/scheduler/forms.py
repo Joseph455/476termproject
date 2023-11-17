@@ -1,11 +1,12 @@
 from ast import List
 from typing import Any
 from django.forms import ModelForm, FileField, FileInput, CharField, Textarea, ValidationError
-from term_project.scheduler.models import DataSet
+from term_project.scheduler.models import DataSet, Schedule
 from django.core.validators import FileExtensionValidator
 import csv
 import io
 import jsonschema
+from rest_framework import serializers
 
 
 class DatasetCreationForm(ModelForm):
@@ -89,4 +90,37 @@ class DatasetCreationForm(ModelForm):
             'cources': cource_content,
             'venues': venue_content,
         }
+
+
+
+class ScheduleCreationForm(ModelForm):
+
+    class Meta:
+        model = Schedule
+        fields = ['title', 'dataset']
+
+
+class PeriodSerializer(serializers.Serializer):
+    start_time = serializers.TimeField(required=True)
+    end_time = serializers.TimeField(required=True)
+    
+
+class DaySerializer(serializers.Serializer):
+    date = serializers.DateField(required=True)
+    periods = serializers.ListField(child=PeriodSerializer(), required=True) 
+
+
+class SchdeduleCreationSerializer(serializers.Serializer):
+    title = serializers.CharField(required=True)
+    dataset = serializers.CharField(required=True)
+    days = serializers.ListField(child=DaySerializer(), required=True)
+    periods = serializers.ListField(child=PeriodSerializer(), required=True)
+
+
+class ScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Schedule
+        fields = [
+            'title', 'status', 'date_created', 'ga_settings', 'schedulelog',
+        ]
 

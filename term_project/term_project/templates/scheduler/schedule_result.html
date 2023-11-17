@@ -1,0 +1,59 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+
+
+{% block content %}
+<header class="d-flex flex-row justify-content-between align-content-between">
+    <span>
+        <h1 class="text-left my-5">Schedule Result: <i class="text-muted">{{schedule.title}} </i></h1>
+    </span>
+    <span class="my-auto">
+        <p class="text-muted fs-5">created by: {{schedule.created_by.name}}</p>
+        <p class="text-muted">created at: {{schedule.date_created}}</p>
+        
+        {% if schedule.status == schedule.SCHEDULE_STATUS_DONE %}
+            <span class="badge rounded-pill text-bg-success">{{schedule.get_status_display}}</span>
+        {% elif schedule.status == schedule.SCHEDULE_STATUS_STOPPED %}
+            <span class="badge rounded-pill text-bg-danger">{{schedule.get_status_display}}</span>
+        {% elif schedule.status == schedule.SCHEDULE_STATUS_CANCLED %}
+            <span class="badge rounded-pill text-bg-dark">{{schedule.get_status_display}}</span>
+        {% endif %}
+    </span>
+</header>
+
+<section>
+    <div class="card text-center mt-5">
+        <div class="card-header">
+          TimeTable
+        </div>
+        <div class="card-body">
+            {% if not schedule.schedulelog %}
+                <div class="h-100 w-100 d-flex">
+                    <div class="mx-auto my-auto">
+                        <h1>Nothing to display </h1>
+                        {% if schedule.status == schedule.SCHEDULE_STATUS_PROCESSING %}
+                            <p>Schedule is still processing </p>
+                        {% else %}
+                            <p>TimeTable was {{schedule.get_status_display}}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+            <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Day</th>
+                    <th scope="col">8:00 - 11:00</th>
+                    <th scope="col">12:00 - 15:00</th>
+                    <th scope="col">15:30 - 18:30</th>
+                  </tr>
+                </thead>
+                <tbody class="table-group-divider">
+                </tbody>
+              </table>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock content %}

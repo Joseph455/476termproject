@@ -56,6 +56,44 @@ class Schedule(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     final_result = models.JSONField(null=True)
     ga_settings = models.JSONField(default=DEFAULT_SCHEDULE_SETTINGS)
+    dataset = models.ForeignKey(DataSet, related_name='schedules', on_delete=models.PROTECT)
+
+
+class SchedulePeriod(models.Model):
+    _id = models.PositiveIntegerField()
+    schedule = models.ForeignKey(Schedule, related_name='periods',  on_delete=models.CASCADE)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                "start_time",
+                "end_time",
+                "schedule",
+                name="unique_schedule_period_time",
+            ),
+            models.UniqueConstraint(
+                "id",
+                "schedule",
+                name="unique_schedule_period_id",
+            ),
+        ]
+
+
+class ScheduleDay(models.Model):
+    date = models.DateField()
+    schedule = models.ForeignKey(Schedule, related_name='days', on_delete=models.CASCADE)
+    periods = models.ManyToManyField(SchedulePeriod, related_name='days')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                "date",
+                "schedule",
+                name="unique_schedule_date",
+            )
+        ]
 
 
 class ScheduleLog(models.Model):

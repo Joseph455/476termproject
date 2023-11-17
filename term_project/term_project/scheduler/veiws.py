@@ -4,8 +4,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.shortcuts import render
-from django.contrib import messages
-
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response 
 from term_project.scheduler.models import (
     Schedule, 
     DataSet, 
@@ -13,8 +14,16 @@ from term_project.scheduler.models import (
     CourceDataSet,
     VenueModel,
     VenueDataSet,
+    SchedulePeriod,
+    ScheduleDay,
 )
-from term_project.scheduler.forms import DatasetCreationForm
+from term_project.scheduler.forms import (
+    DatasetCreationForm, 
+    ScheduleCreationForm,
+    SchdeduleCreationSerializer,
+    ScheduleSerializer,
+)
+from term_project.users.admin import User
 
 
 class DashboardView(LoginRequiredMixin, View):
@@ -82,5 +91,96 @@ class ScheduleCreationView(LoginRequiredMixin, View):
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Display Schedule creation view."""
 
-        context = {'datasets': DataSet.objects.all().order_by('-date_created')}
+        schedule_form = ScheduleCreationForm()
+        context = {
+            'datasets': DataSet.objects.all().order_by('-date_created'), 
+            'schedule_form': schedule_form
+        }
         return render(request, 'scheduler/schedule_creation.html', context=context)
+
+
+class ScheduleCreationAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = User.objects.first()
+        
+        serializer = SchdeduleCreationSerializer(data=request.data)
+        if serializer.is_valid():
+            # create schdeule 
+            print(serializer.data)
+            dataset = DataSet.objects.filter(title=serializer.data['dataset']).first()
+            schedule_record = Schedule.objects.create(
+                title=serializer.data['title'], 
+                dataset=dataset, 
+                created_by=user
+            )
+
+            # create periods
+            for index, period in enumerate(serializer.data['periods']):
+                SchedulePeriod.objects.create(
+                    start_time=period['start_time'], 
+                    end_time=period['end_time'],
+                    _id=index+1,
+                    schedule=schedule_record,
+                )
+
+            # create days
+            for day in serializer.data['days']:
+                day_record = ScheduleDay.objects.create(
+                    date=day['date'],
+                    schedule=schedule_record,
+                )
+                period_records = []
+                for period in day['periods']:
+                    period_records.append(
+                        SchedulePeriod.objects.filter(
+                            start_time=period['start_time'],
+                            end_time=period['end_time'],
+                            schedule=schedule_record,
+                        ).first()
+                    )
+                day_record.periods.set(period_records)
+                day_record.save()
+            
+            return Response(
+                data={
+                    'message': 'Schedule Creation Succsessful', 
+                    'redirect': reverse('scheduler:schedule_monitor', args=[schedule_record.pk])
+                }, 
+                status=201
+            )
+
+
+        return Response(data={'message': 'SChedule Creation Failed'}, status=401)
+
+
+class SchduleMonitorView(LoginRequiredMixin, generic.DetailView):
+    model = Schedule
+    template_name = 'scheduler/schdeule_monitor.html'
+
+
+class ScheduleMonitorAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        schedule_record = get_object_or_404(Schedule, pk=self.kwargs['pk'])
+        serializer = ScheduleSerializer(instance=schedule_record)
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        schedule_record = get_object_or_404(Schedule, pk=self.kwargs['pk'])
+        serializer = ScheduleSerializer(
+            instance=schedule_record, 
+            data=request.data, 
+            partial=True
+        )
+        serializer.is_valid()
+        serializer.save()
+        return Response(serializer.data)
+
+
+class ScheduleResultView(LoginRequiredMixin, generic.DetailView):
+    model = Schedule
+    template_name = 'scheduler/schedule_result.html'
+

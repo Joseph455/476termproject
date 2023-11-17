@@ -1,0 +1,312 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+{% load crispy_forms_tags %}
+
+
+{% block content %}
+<header>
+    <h1 class="text-left my-3">Schedule Creation</h1>
+</header>
+
+
+<section>
+    <form>
+        <div class="d-flex flex-row justify-content-between col-md-8 mt-5">
+            {% csrf_token %}
+            {{ schedule_form|crispy }}
+        </div>
+        <div class="accordion col-md-8" id="accordionPanelsStayOpenExample">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
+                  Add Periods <span id="periodCount" class="mx-auto fs-6 text-muted">(0) Added</span>
+                </button>
+              </h2>
+              <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                    <div id="period_container">
+                        <div class="input-group mb-2 periodForm" id="period_1">
+                            <input type="time" name="start_time" class="form-control periodInputField" placeholder="from" aria-label="Start Time">
+                            <span class="input-group-text text-muted"><b>Start Time</b> : <b>End Time</b></span>
+                            <input type="time" name="end_time" class="form-control periodInputField" placeholder="to" aria-label="End Time">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button id="add_period_btn" type="button" class="btn btn-success ml-auto">
+                            Add More
+                        </button>
+                    </div>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+                  Add Days <span id="dayCount" class="mx-auto fs-6 text-muted">(0) Added</span>
+                </button>
+              </h2>
+              <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    <div id="days_container">
+                        <div class="input-group mb-3">
+                            <h1 class="fs-3 text-center"> Add at least 1 period.</h1>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button id="add_day_btn" type="button" class="btn btn-success ml-auto" disabled>
+                            Add More
+                        </button>
+                    </div>
+                </div>
+              </div>
+            </div>
+        </div>
+        <button class="btn btn-primary my-4" id="createSchduleBtn" type="submit" disabled>Create Schedule</submit>
+    </form>
+</section>
+{% endblock content %}
+
+
+{% block inline_javascript %}
+<script>
+
+    const periods = [];
+    const days = [];
+
+    const findByID = (id, list) => {
+        for (const period of list) {
+            if (period._id === id) {
+                return period;
+            }
+        }
+        return null;
+    }
+
+    const addMore = (type) => {
+        if (type === 'period' ) {
+            const periodContainer = document.querySelector('#period_container');
+            const periodForm = document.createElement('div');
+            
+            periodForm.innerHTML = `
+                <div class="input-group mb-2" id="period_${periods.length + 1}">
+                    <input type="time" name="start_time" class="form-control periodInputField" placeholder="from" aria-label="Start Time">
+                    <span class="input-group-text text-muted"><b>Start Time</b> : <b>End Time</b></span>
+                    <input type="time" name="end_time" class="form-control periodInputField" placeholder="to" aria-label="End Time">
+                </div>
+            `
+            periodContainer.appendChild(periodForm);
+            const periodInputs = periodForm.querySelectorAll('.periodInputField');
+
+            periodInputs.forEach(input_field  => {
+                input_field.addEventListener('change', (e) => periodInputEvent(e.target));
+            });
+
+        } else if (type === 'day') {
+            const dayContainer = document.querySelector('#days_container');
+            let periodOptions = ``;
+            
+            for (const period of periods) {
+                periodOptions += `<option value="${period._id}">${period.start_time} To ${period.end_time}</option>`
+            }
+            
+            const dayForm = document.createElement('div');
+            dayForm.innerHTML = `
+                <div class="input-group mb-3" id="day_${days.length + 1}">
+                    <input type="date" name="date" class="form-control dayInputField" placeholder="from" aria-label="Day">
+                    <select class="form-select dayInputField dayPeriodSelect" name="periods" aria-label="Default select example" multiple size="3" >
+                        ${periodOptions}
+                    </select>
+                </div>
+            `;
+            dayContainer.appendChild(dayForm);
+
+            const dayInputs = document.querySelectorAll('.dayInputField');
+            dayInputs.forEach(input_field => {
+                input_field.addEventListener('change', (e) => dayInputEvent(e.target));
+            });
+        }
+    }
+
+    const activateDayContainer = () => {
+        const daysContainer = document.querySelector('#days_container')
+        daysContainer.innerHTML = '';
+
+        const daysAddBtn = document.querySelector('#add_day_btn');
+        daysAddBtn.disabled = false;
+
+        addMore('day');
+    }
+
+    const updateDaysPeriodOptions = () => {
+        // update select options of all days.
+        const peridoSelectFields = document.querySelectorAll('.dayPeriodSelect');
+
+        
+        for (const selectField of peridoSelectFields) {
+            const selectedOptions = [...selectField.options].filter(x => x.selected).map(x => x.value);
+
+            // clear options 
+            selectField.innerHTML = '';
+            console.log(selectedOptions)
+
+            for (const period of periods) {
+                const optionElement = document.createElement('option');
+                optionElement.innerHTML = `${period.start_time} To ${period.end_time}`
+                optionElement.value = period._id;
+                optionElement.selected = (selectedOptions.includes(period._id)); 
+                selectField.appendChild(optionElement)
+            }
+        }
+    } 
+
+    const periodInputEvent = (input_field) => {
+        const parentID = input_field.parentElement.id;
+        let periodData = findByID(parentID, periods)
+
+        if (periodData === null) {
+            periodData = {_id: parentID}
+            periodData[input_field.name] = input_field.value;
+            periods.push(periodData);
+        } else {
+            periodData[input_field.name] = input_field.value
+        }
+
+        // update period counter
+        document.querySelector('#periodCount').innerHTML =  `(${periods.length}) Added`
+
+        // if first period has been updated and both time inputted
+        if (periods.length === 1 && periods[0].start_time && periods[0].end_time) {
+            // activate day container
+            activateDayContainer()
+        }
+
+        let update = true; 
+        for (const period of periods) {
+            update = period.start_time && period.end_time;
+        }
+        if (update) updateDaysPeriodOptions();
+    }
+
+    const dayInputEvent = (input_field) => {
+        const parentID = input_field.parentElement.id;
+        let dayData = findByID(parentID, days);
+
+        if (dayData === null) {
+            dayData = {_id: parentID}
+            let input_value = input_field.value;
+
+            if (input_field.name === 'periods') {
+                const selectedPeriods = [...input_field.options].filter(x => x.selected).map(x => x.value);
+                input_value = selectedPeriods.map((period_id) => findByID(period_id, periods))
+            }
+    
+            dayData[input_field.name] = input_field.value;
+            days.push(dayData);
+        } else {
+            let input_value = input_field.value;
+            if (input_field.name === 'periods') {
+                const selectedPeriods = [...input_field.options].filter(x => x.selected).map(x => x.value);
+                input_value = selectedPeriods.map((period_id) => findByID(period_id, periods))
+            }
+            dayData[input_field.name] = input_value
+        }
+
+        // update period counter
+        document.querySelector('#dayCount').innerHTML =  `(${days.length}) Added`
+
+        // if first day has been updated and both fields are inputted
+        if (days.length === 1 && days[0].date && days[0].periods) {
+            // activate submit button
+            document.querySelector('#createSchduleBtn').disabled = false;
+        }
+
+
+    }
+
+    window.addEventListener('load', () => {
+        const addMorePeriodBtn = document.querySelector('#add_period_btn');
+        const addMoreDayBtn = document.querySelector('#add_day_btn');
+        const periodInputs = document.querySelectorAll('.periodInputField');
+        const dayInputs = document.querySelectorAll('.dayInputField');
+
+        addMorePeriodBtn.addEventListener('click', () => {
+            let has_unfilled = false; 
+            const periodInputField  = document.querySelectorAll('.periodInputField')
+            periodInputField.forEach(field => {
+                if (!has_unfilled) {
+                    has_unfilled = field.value === '';
+                }
+            })
+            if (has_unfilled) return
+            
+            // add period
+            addMore('period');
+        });
+
+        addMoreDayBtn.addEventListener('click', () => {
+            let has_unfilled = false; 
+            const dayInputField  = document.querySelectorAll('.dayInputField')
+            dayInputField.forEach(field => {
+                if (!has_unfilled) {
+                    has_unfilled = field.value === '';
+                }
+            })
+            if (has_unfilled) return
+            
+            // add period
+            addMore('day');
+        }) 
+        
+        periodInputs.forEach(input_field  => {
+            input_field.addEventListener('change', (e) => periodInputEvent(e.target));
+        });
+
+        dayInputs.forEach(input_field => {
+            input_field.addEventListener('change', (e) => dayInputEvent(e.target));
+        });
+
+        const form = document.querySelector('form');
+        form.onsubmit = async (event) => {
+            event.preventDefault()
+            const data = {
+                'title': document.querySelector('#id_title').value,
+                'dataset': document.querySelector('#id_dataset').value,
+                'days': days,
+                'periods': periods,
+            }
+
+            const response = await fetch(
+                "{% url 'scheduler:create_schedule_api' %}",
+                {
+                    'method': 'POST', 
+                    'body': JSON.stringify(data),
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{csrf_token}}',    
+                    }
+                }
+            );
+            const message = await response.json();
+
+            if (response.status === 201) {
+                alert(message.message)
+                setTimeout(
+                    () => window.location.assign(message.redirect),
+                    1000
+                )
+            } else {
+                alert(message.message)
+                setTimeout(
+                    () => window.location.reload(),
+                    1000
+                )
+            }
+
+            //Fail the onsubmit to avoid page refresh.
+            return false; 
+        }
+    })
+
+</script>
+
+{% endblock inline_javascript %}
