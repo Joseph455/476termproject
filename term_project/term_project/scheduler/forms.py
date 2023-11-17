@@ -120,6 +120,7 @@ class SchdeduleCreationSerializer(serializers.Serializer):
 class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Schedule
+        depth = 1
         fields = [
             'title', 'status', 'date_created', 'ga_settings', 'schedulelog',
         ]

@@ -9,8 +9,8 @@ class Course:
     required_periods: int
     students_population: int
 
-    def __init__(self, code: str, students_population: int, required_periods: int = 1):
-        self.id = Course.__class_id
+    def __init__(self, code: str, students_population: int, required_periods: int = 1, id: int = None):
+        self.id = id or Course.__class_id
         Course.__class_id += 1
         self.code = code
         self.required_periods = required_periods
@@ -38,8 +38,8 @@ class Day:
     date: str
     periods: list[int] 
 
-    def __init__(self, date: str, periods: list[int]) -> None:
-        self.id = Day.__class_id
+    def __init__(self, date: str, periods: list[int], id: int = None) -> None:
+        self.id = id or Day.__class_id
         Day.__class_id += 1
         self.date = date
         self.periods = periods
@@ -65,8 +65,8 @@ class Venue:
     title: str
     capacity: int
 
-    def __init__(self, title: str, capacity: int) -> None:
-        self.id = Venue.__class_id
+    def __init__(self, title: str, capacity: int, id: int = None) -> None:
+        self.id = id or Venue.__class_id
         Venue.__class_id += 1
         self.title = title
         self.capacity = capacity

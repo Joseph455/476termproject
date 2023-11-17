@@ -1,25 +1,43 @@
 import random
 from typing import Any
-from constraints.hard_constraints import check_hard_constraints 
+from term_project.scheduler.generic_algorithim.constraints.hard_constraints import check_hard_constraints 
+from pprint import pprint
 
 
 class TimeTable:
     """Class representing a timetable."""
     population_id: int = 1
     chromosome: dict[int, dict[int, dict[int, list[int]]]]
-    unfitness_score: int = 0
-    diversity_score: int = 0  
+    unfitness_score: int
 
     def __init__(self, chromosome: dict[int, dict[int, dict[int, list[int]]]], phenotype: Any) -> None:
         """Initialises a new timetable randomly or from chromosome."""
         self.id = TimeTable.population_id
         TimeTable.population_id += 1
         self.chromosome = chromosome
-        self.__calcuate_fitness_score(phenotype)
+        self._phenotype = phenotype 
+        self.calcuate_fitness_score()
 
-    def __calcuate_fitness_score(self, phenotype) -> None:
+    def calcuate_fitness_score(self) -> None:
         """Calculates the fitness score of the timetable."""
-        self.unfitness_score = check_hard_constraints(self, phenotype)
+        self.unfitness_score = check_hard_constraints(self, self._phenotype)
+    
+    def chromosome_to_phenotype(self, phenotype: Any) -> Any:
+        """Convert chromosome to phenotype data."""
+        data = {}
+        for cource_id, cource_chromosome in self.chromosome.items():
+            cource = find_phenotype_by_id(phenotype['cources'], cource_id)
+            data[cource.code] = {}
+
+            for day_id, day_chromosome in cource_chromosome.items():
+                day = find_phenotype_by_id(phenotype['days'], day_id)
+                data[cource.code][str(day.date)] = {}
+
+                for venue_id, venue_chromosome in day_chromosome.items():
+                    venue = find_phenotype_by_id(phenotype['venues'], venue_id)
+                    data[cource.code][str(day.date)][venue.title] = venue_chromosome
+        
+        return data
   
     def __lt__(self, other: "TimeTable") -> bool:
         """Compares the fitness score of two timetables."""
@@ -92,8 +110,10 @@ def pick_center_third(lst: list[Any]) -> tuple[int, int]:
 
 def find_phenotype_by_id(phenotype_list, id) -> Any:
     """Find a phenotype by its id."""
-    return list(filter(lambda phenotype: phenotype.id == id, phenotype_list))[0]
+    results = list(filter(lambda phenotype: phenotype.id == id, phenotype_list))
+    
+    if not results:
+        print([phenotype_list, id])
 
-# if __name__ == '__main__':
-#     some_cool_list = ['a', 'b','d', 'c', 'e', 'f']
-#     print(pick_center_third(some_cool_list))
+    return results[0] if results else None
+

@@ -1,14 +1,15 @@
-
+import math
 
 
 def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
     """Resolve hard constraints."""
 
-    from utils import find_phenotype_by_id
+    from term_project.scheduler.generic_algorithim.utils import find_phenotype_by_id
     
     total_score = 0
     cource_ids_to_be_scheduled = [course.id for course in phenotype['cources']]
     collision_array = [] 
+    collion_set = set()
     
     # all papers must be scheduled
     total_score += (len(cource_ids_to_be_scheduled) - len(list(individual.chromosome.keys()))) * score
@@ -24,14 +25,17 @@ def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
                
                 for index, period in enumerate(venue_gene):
                     
-                    # ensure periods are valid phenotype
-                    total_score += score if period not in find_phenotype_by_id(phenotype['days'], day_id).periods else 0
+                    day_gene = find_phenotype_by_id(phenotype['days'], day_id)
+                    # ensure days are valid phenotype
+                    total_score += score if not day_gene else 0
 
-                    # avoid schedule collisions
-                    if f'{day_id}{venue_id}{period}' in collision_array:
-                        total_score += score 
-                    else :
-                        collision_array.append(f'{day_id}{venue_id}{period}')
+                    # ensure period are valid genotype
+                    if day_gene:
+                        total_score += score if period not in day_gene.periods else 0
+
+                    col = f'{day_id}{venue_id}{period}'
+                    collision_array.append(col)
+                    collion_set.add(col)
 
                     try:
                         # papers spanning multiple peridos should have adjacent periods
@@ -39,5 +43,6 @@ def check_hard_constraints(individual, phenotype, score: int = 1) -> int:
                     except IndexError:
                         continue
     
-        
+        # avoid schedule collisions
+    total_score += abs(len(collision_array) - len(collion_set)) * score
     return total_score

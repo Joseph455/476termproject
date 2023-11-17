@@ -1,11 +1,21 @@
+from concurrent.futures import ThreadPoolExecutor
+import copy
 import random
 from typing import Any
-
-from phenotypes import Venue, Course, Day
-from timetable_reader import read_phenotypes_from_json 
-from utils import find_consequitive_integers, TimeTable, find_phenotype_by_id, rank_selection, tournament_selection, pick_center_third
 from pprint import pprint
+import concurrent
 
+from django.utils import timezone
+from term_project.scheduler.generic_algorithim.phenotypes import Venue, Course, Day
+from term_project.scheduler.models import Schedule, ScheduleLog
+from term_project.scheduler.generic_algorithim.utils import (
+    TimeTable, 
+    find_consequitive_integers, 
+    find_phenotype_by_id, 
+    tournament_selection, 
+    pick_center_third,
+    check_hard_constraints,
+)
 
 
 class GATestRunner:
@@ -24,14 +34,11 @@ class GATestRunner:
     _mutation_probablity = 0.8
     _tournament_size = 2
     _elite: TimeTable = None
-    # _rank_selection_probability = 0.2
-
-    _phenotype: dict[str, list[Course | Venue | Day]] = None
 
     def __init__(self, phenotype: dict[str, list[Course | Venue | Day]]):
         self._phenotype = phenotype
 
-    def __perform_mutation(self, child: TimeTable) -> TimeTable:
+    def _perform_mutation(self, child: TimeTable) -> TimeTable:
         """Mutate a childs gene based on some  proberbility."""
 
         if random.random() <= self._mutation_probablity:
@@ -45,7 +52,7 @@ class GATestRunner:
             day_to_swap_out = list(child.chromosome[cource].keys())[0]
             day_to_swap_to = random.choice([day.id for day in self._phenotype['days'] if day != day_to_swap_out])
 
-            if day_to_swap_to != day_to_swap_out:
+            if day_to_swap_to != day_to_swap_out and day_to_swap_to is not None:
                 child.chromosome[cource].update({day_to_swap_to: child.chromosome[cource][day_to_swap_out]})
                 child.chromosome[cource].pop(day_to_swap_out)
 
@@ -67,14 +74,13 @@ class GATestRunner:
             venue = list(child.chromosome[cource][day].keys())[0]
             period_to_swap_out = random.choice(child.chromosome[cource][day][venue])
             day_phenotype: Day = find_phenotype_by_id(self._phenotype['days'], day)
-            period_to_swap_in = random.choice([period for period in day_phenotype.periods if period != period_to_swap_out])
+            period_to_swap_in = random.choice([period for period in day_phenotype.periods])
             
             if period_to_swap_out != period_to_swap_in and period_to_swap_in:
                 child.chromosome[cource][day][venue].remove(period_to_swap_out)
                 child.chromosome[cource][day][venue].append(period_to_swap_in)
         
-
-    def __perform_crossover(self, parent_a: TimeTable, parent_b: TimeTable) -> list[TimeTable]:
+    def _perform_crossover(self, parent_a: TimeTable, parent_b: TimeTable) -> list[TimeTable]:
         """Crossover parents from a mating pool using partially mapped crossover PMX."""
 
         parent_a_chormosome_keys = list(parent_a.chromosome.keys())
@@ -111,7 +117,7 @@ class GATestRunner:
         
         return [TimeTable(child_a_chromosomes, phenotype=self._phenotype), TimeTable(child_b_chromosomes, phenotype=self._phenotype)]
 
-    def __perform_selection(self) -> list[tuple[TimeTable, TimeTable]]:
+    def _perform_selection(self) -> list[tuple[TimeTable, TimeTable]]:
         """Create a mating pool to be used for crossover."""
         mating_pool = []
 
@@ -119,43 +125,15 @@ class GATestRunner:
             parent_1 = tournament_selection(self.population, self._tournament_size)
             parent_2 = tournament_selection(self.population, self._tournament_size)
 
-            # while parent_1.id == parent_2.id:
-            #     # just in case we select the same individuals  
-            #     parent_2 = tournament_selection(self.population, self._tournament_size)
+            while parent_1.id == parent_2.id:
+                # just in case we select the same individuals  
+                parent_2 = tournament_selection(self.population, self._tournament_size)
             
             mating_pool.append((parent_1, parent_2))
         
         return mating_pool
 
-    # def __perform_selection(self) -> list[tuple[TimeTable, TimeTable]]:
-    #     """Create a mating pool to be used for crossover."""
-    #     mating_pool = []
-    #     propability_weights = []
-    #     sorted_population = list(sorted(self.population, reverse=True))
-
-    #     for i in range(len(sorted_population)) :
-    #         n = i + 1.0
-
-    #         if n == len(self.population):
-    #             weight = (1 - self._rank_selection_probability)**(n - 1)
-    #         else:
-    #             weight = ((1 - self._rank_selection_probability)**(n - 1)) * self._rank_selection_probability
-
-    #         propability_weights.append(weight)
-        
-    #     while len(mating_pool) < self.max_population_size:
-    #         parent_1 = rank_selection(sorted_population=sorted_population, population_wiegth=propability_weights)
-    #         parent_2 = rank_selection(sorted_population=sorted_population, population_wiegth=propability_weights)
-
-    #         while parent_1.id == parent_2.id:
-    #             # just in case we select the same individuals  
-    #             parent_2 = rank_selection(sorted_population=sorted_population, population_wiegth=propability_weights)
-            
-    #         mating_pool.append((parent_1, parent_2))
-        
-    #     return mating_pool
-
-    def __generate_initial_population(self) -> None:
+    def _generate_initial_population(self) -> None:
         """Randomly generate intial population."""
 
         # before generating population we need to generate phenotype 
@@ -227,33 +205,28 @@ class GATestRunner:
 
         return phenotype
 
-    def __evaluate_population(self) -> bool:
+    def _evaluate_population(self) -> bool:
         """Check if the termination criteria are met."""
-
-        if (
-            self._generation == self.max_number_of_generations or 
-            max(self.population).unfitness_score == 0
-        ):
-            return True
-
-        return False
+        best = max(self.population)
+        best.calcuate_fitness_score()
+        return best.unfitness_score == 0
 
     def run(self) -> None:
         """Run test GA runner."""
         
-        self.__generate_initial_population()
+        self._generate_initial_population()
         best_individual = max(self.population)
         worst_individual = min(self.population)
        
-        while not self.__evaluate_population(): 
+        while not self._evaluate_population(): 
             self._generation += 1
-            mating_pool = self.__perform_selection()
+            mating_pool = self._perform_selection()
             new_population = []
 
             for match in mating_pool:
-                child_1, child_2 = self.__perform_crossover(match[0], match[1])
-                self.__perform_mutation(child_1)
-                self.__perform_mutation(child_2)
+                child_1, child_2 = self._perform_crossover(match[0], match[1])
+                self._perform_mutation(child_1)
+                self._perform_mutation(child_2)
 
                 new_population.append(child_1)
                 new_population.append(child_2)
@@ -274,8 +247,111 @@ class GATestRunner:
 
         pprint(best_individual.chromosome)
 
-if __name__ == '__main__':
-    # phenotype_data_set = read_phenotypes_from_json(file_name='2022_2023_phenotype.json')
-    runner = GATestRunner(phenotype=None)
-    runner.run()
+
+
+class GARunner(GATestRunner):
+
+    __log_frequency: int = 10
+
+    def __init__(self, phenotype: dict[str, list[Course | Venue | Day]], schedule_model: Schedule):
+        self.schedule_model = schedule_model
+        super().__init__(phenotype)
+
+    def _evaluate_population(self) -> bool:
+        terminate = super()._evaluate_population()
+        print(terminate)
+        self.schedule_model.refresh_from_db()
+        return terminate or (self.schedule_model.status != Schedule.SCHEDULE_STATUS_PROCESSING)
+
+    def _load_settings(self) -> None:
+        """Load GA settings from DB."""
+        self.schedule_model.refresh_from_db()
+        self.max_population_size = self.schedule_model.ga_settings['population_size']
+        self._tournament_size = self.schedule_model.ga_settings['tournament_size']
+        self._mutation_probablity = self.schedule_model.ga_settings['mutation_probability']
+
+    def _log_evaluation(self, best_individual: TimeTable, worst_individual: TimeTable) -> None:
+        """Log schedule evaluation."""
+        self.schedule_model.refresh_from_db()
+
+        if hasattr(self.schedule_model, 'schedulelog'):
+            self.schedule_model.schedulelog.current_conflict_score = best_individual.unfitness_score
+            self.schedule_model.schedulelog.number_of_generations= self._generation
+            self.schedule_model.schedulelog.result = best_individual.chromosome_to_phenotype(phenotype=self._phenotype)
+            self.schedule_model.schedulelog.timestamp=timezone.now()
+            self.schedule_model.schedulelog.save(
+                update_fields=[
+                    'current_conflict_score', 'number_of_generations',
+                    'result', 'timestamp'
+                ]
+            )
+        else:
+            ScheduleLog.objects.create(
+                schedule=self.schedule_model,
+                initial_conflict_score=worst_individual.unfitness_score,
+                current_conflict_score=best_individual.unfitness_score,
+                number_of_generations=self._generation,
+                result=best_individual.chromosome_to_phenotype(phenotype=self._phenotype),
+                timestamp=timezone.now(),
+            )
+
+
+    def run(self) -> TimeTable:
+        """Run test GA runner."""
+        
+        self._load_settings()
+        self._generate_initial_population()
+
+        best_individual = max(self.population)
+        worst_individual = min(self.population)
+
+        self._elite = copy.deepcopy(best_individual)
+
+        while not self._evaluate_population(): 
+            self._generation += 1
+            mating_pool = self._perform_selection()
+            new_population = []
+
+            for match in mating_pool:
+                child_1, child_2 = self._perform_crossover(match[0], match[1])
+                self._perform_mutation(child_1)
+                self._perform_mutation(child_2)
+
+                new_population.append(child_1)
+                new_population.append(child_2)
+
+            self.population = new_population
+
+            with ThreadPoolExecutor(max_workers=10) as executor: 
+                # re-evaluate populations
+                for individual in self.population:
+                    executor.submit(individual.calcuate_fitness_score)
+
+            best_individual = max(self.population)
+            worst_individual = min(self.population)
+
+            self._elite.calcuate_fitness_score()
+
+            if best_individual < self._elite:
+                # self.population.remove(worst_individual)
+                self.population.append(copy.deepcopy(self._elite))
+            else:
+                self._elite = copy.deepcopy(best_individual)
+            
+            if (self._generation % self.__log_frequency == 0) or self._generation == 1:
+                # log first generation and every other concurrent freq ones
+                self._load_settings()
+                self._log_evaluation(
+                    best_individual=self._elite if self._elite else  best_individual,
+                    worst_individual=worst_individual
+                )
+            
+            print([self._elite, worst_individual])
+
+        # log last run
+        self._log_evaluation(
+            best_individual=self._elite if self._elite else  best_individual,
+            worst_individual=worst_individual
+        )
+        return best_individual
 

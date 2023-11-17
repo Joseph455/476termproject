@@ -1,3 +1,4 @@
+from typing import Any
 from django.urls import reverse
 from django.views import View, generic
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -23,6 +24,7 @@ from term_project.scheduler.forms import (
     SchdeduleCreationSerializer,
     ScheduleSerializer,
 )
+from term_project.scheduler.tasks import solve_timetable_problem_task
 from term_project.users.admin import User
 
 
@@ -108,7 +110,6 @@ class ScheduleCreationAPIView(APIView):
         serializer = SchdeduleCreationSerializer(data=request.data)
         if serializer.is_valid():
             # create schdeule 
-            print(serializer.data)
             dataset = DataSet.objects.filter(title=serializer.data['dataset']).first()
             schedule_record = Schedule.objects.create(
                 title=serializer.data['title'], 
@@ -143,6 +144,7 @@ class ScheduleCreationAPIView(APIView):
                 day_record.periods.set(period_records)
                 day_record.save()
             
+            solve_timetable_problem_task.delay(schedule_record.pk)
             return Response(
                 data={
                     'message': 'Schedule Creation Succsessful', 
@@ -184,3 +186,7 @@ class ScheduleResultView(LoginRequiredMixin, generic.DetailView):
     model = Schedule
     template_name = 'scheduler/schedule_result.html'
 
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        data = super().get_context_data(**kwargs)
+        data['periods'] = data['schedule'].periods.all().order_by('_id')
+        return data
