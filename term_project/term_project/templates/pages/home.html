@@ -1,0 +1,96 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+{% block css %}
+<style>
+  body {
+    background-color: #7895b3;
+    background-image: url("{% static './images/backgroup_1.jpg' %}");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+
+  .hero {
+    /* background-image: url("{% static './images/ui_logo.jpeg' %}"); */
+    background-size: cover;
+    background-position: center;
+    height: 15vh;
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-size: 4rem;
+    margin-top: 100px;
+  }
+
+  .hero p {
+    font-size: 1.5rem;
+  }
+
+  .features {
+    padding: 50px 0;
+  }
+
+  .features h2 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .feature {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .feature i {
+    font-size: 4rem;
+    margin-bottom: 10px;
+  }
+
+  .cta {
+    background-color: #007bff;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  .cta h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+
+  .cta a {
+    padding: 10px 20px;
+    background-color: #0069d9;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+  }
+</style>
+{% endblock css %} {% block content %}
+
+<header class="hero">
+  <h1>Examination Timetable Scheduler</h1>
+  <p>Easily improve examination schedules.</p>
+</header>
+
+<section class="features">
+  <h2 class="fs-1">Features</h2>
+
+  <div class="row justify-content-center">
+    <div class="col-md-4 feature p-5 border rounded shadow-sm mx-5">
+      <i class="bi bi-calendar-range"></i>
+      <h3>Automatically generate your timetable</h3>
+    </div>
+    <div class="col-md-4 feature p-5 border rounded shadow-sm mx-5">
+      <i class="bi bi-easel2"></i>
+      <h3>Easily manager timetables</h3>
+    </div>
+  </div>
+</section>
+
+<section class="text-center">
+  <h2>Get Started Today</h2>
+  <a class="btn btn-lg btn-primary " href="{% url 'account_login' %}">Sign In</a>
+</section>
+
+{% endblock content %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+
+{% block content %}
+<header class="d-flex flex-row justify-content-between align-content-between">
+    <span>
+        <h1 class="text-left my-5">Dataset: <i class="text-muted">{{dataset.title}} </i></h1>
+        <p class="text-muted">{{dataset.description}}</p>
+    </span>
+    <span class="my-auto">
+        <p class="text-muted fs-5">created by: {{dataset.created_by.name}}</p>
+        <p class="text-muted">created at: {{dataset.date_created}}</p>
+    </span>
+</header>
+
+<section class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header text-center fs-4 d-flex justify-content-between px-3">
+                <span class="fs-4">Venues</span>
+                <span>{{dataset.venues.count}}</span>
+            </div>
+            <div class="card-body overflow-auto" style="height: 60vh;">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Venue</th>
+                          <th scope="col">Examination capacity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for venue in dataset.venues.all %}
+                            <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{venue.title}}</td>
+                            <td>{{venue.examination_capacity}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header text-center fs-4 d-flex justify-content-between px-3">
+                <span class="fs-4">Cources</span>
+                <span>{{dataset.cources.count}}</span>
+            </div>
+            <div class="card-body overflow-auto" style="height: 60vh;">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Cource code</th>
+                          <th scope="col">Population</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cource in dataset.cources.all %}
+                            <tr>
+                            <th scope="row">{{ forloop.counter }}</th>
+                            <td>{{cource.code}}</td>
+                            <td>{{cource.population}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+{% endblock content %}

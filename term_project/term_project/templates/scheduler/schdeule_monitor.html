@@ -1,0 +1,260 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+{% load crispy_forms_tags %}
+
+
+{% block content %}
+
+<header class="d-flex flex-row justify-content-between align-content-between">
+    <span>
+        <h1 class="text-left my-5">Schedule Monitor: <i class="text-muted">{{schedule.title}} </i></h1>
+    </span>
+    <span class="my-auto">
+        <p class="text-muted fs-5">created by: {{schedule.created_by.name}}</p>
+        <p class="text-muted">created at: {{schedule.date_created}}</p>
+    </span>
+</header>
+
+<section>
+    <form>
+        <h1 class="fs-2 border w-50 mx-auto text-center p-3 shadow rounded">GA Settings</h1>
+        <div class="row mt-5">
+            <div class="row">
+                <div class="col-3 mb-3">
+                    <label for="population_size_input" class="form-label">Population Size</label>
+                    <input
+                        min="50"
+                        max="2000"
+                        type="number" 
+                        name="population_size"
+                        class="form-control settingInput" 
+                        id="population_size_input"
+                        placeholder="{{schedule.ga_settings.population_size}}" 
+                        value="{{schedule.ga_settings.population_size}}"
+                        disabled
+                    />
+                  </div>
+                  <div class="col-3 mb-3">
+                    <label for="mutation_probability_input" class="form-label">Mutation Probability</label>
+                    <input
+                        min="0"
+                        max="1"
+                        type="number" 
+                        name="mutation_probability"
+                        class="form-control settingInput" 
+                        id="mutation_probability_input"
+                        placeholder="{{schedule.ga_settings.mutation_probability}}" 
+                        value="{{schedule.ga_settings.mutation_probability}}"
+                        disabled
+                    />
+                  </div>
+                  <div class="col-3 mb-3">
+                    <label for="tournament_size_input" class="form-label">Tournament Size </label>
+                    <input
+                        min="2"
+                        max="10"
+                        type="number"
+                        name="tournament_size"
+                        class="form-control settingInput" 
+                        id="mutation_probability_input"
+                        placeholder="{{schedule.ga_settings.tournament_size}}" 
+                        value="{{schedule.ga_settings.tournament_size}}"
+                        disabled
+                    />
+                </div>
+                <button id="settingBtn" class="btn btn-primary col-3 h-50 my-auto">Edit</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+{% if not schedule.schedulelog %}
+<section class="card mt-5 p-4 shadow-sm" style="height: 20rem;">
+    <div id="process_container" class="d-flex flex-column w-100 h-100">
+        <div class="my-auto mx-auto text-center" >
+            <div class="spinner-grow" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Analysing problem please wait...</p>
+        </div>
+        <div>
+            <p id="hint" class="text-center text-muted">Hints: </p>
+        </div>
+        <button id="cancleBtn" class="btn btn-secondary col-2 mx-auto">Cancle Schedule</button>
+    </div>
+</section>
+{% else %}
+<section class="card mt-5 p-4 shadow-sm" style="height: 20rem;">
+    <div id="process_container" class="d-flex flex-column w-100 h-100">
+        <div class="text-muted text-center">
+            <p class="text-muted">
+                Intial Conflict Score: {{schedule.schedulelog.initial_conflict_score}} 
+            </p>
+            <p>Current Conflict Score: {{schedule.schedulelog.current_conflict_score}}</p>
+        </div>
+        <div class="my-auto mx-auto text-center" id="process_container">
+            <div class="spinner-grow" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Scheduling...</p>
+        </div>
+        <div>
+            <p id="hint" class="text-center text-muted">Hints: </p>
+        </div>
+        <button id="cancleBtn" class="btn btn-warning col-2 mx-auto">Stop</button>
+    </div>
+</section>
+{% endif %}
+
+{% endblock content %}
+
+
+{% block inline_javascript %}
+<script>
+
+    const cancleSchedule = async () => {
+        const data = {'status': Number("{{schedule.SCHEDULE_STATUS_CANCLED}}")};
+        const response = await fetch(
+            "{% url 'scheduler:schedule_monitor_api' schedule.pk %}",
+            {
+                'method': 'PATCH', 
+                'body': JSON.stringify(data),
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{csrf_token}}',    
+                }
+            }
+        );
+        
+        window.location.assign("{% url 'scheduler:schedule_result' schedule.pk %}")
+    } 
+
+    const stopSchedule = async () => {
+        const data = {'status': Number("{{schedule.SCHEDULE_STATUS_STOPPED}}")};
+
+        const response = await fetch(
+            "{% url 'scheduler:schedule_monitor_api' schedule.pk %}",
+            {
+                'method': 'PATCH', 
+                'body': JSON.stringify(data),
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{csrf_token}}',    
+                }
+            }
+        );
+
+        // redirect to schedule view page
+        window.location.assign("{% url 'scheduler:schedule_result' schedule.pk %}")
+    }
+
+    const updateScheduleSettings = async () => {
+        const data = {'ga_settings': {}};
+        const settingInputs = document.querySelectorAll('.settingInput');
+
+        for (const input of settingInputs) {
+            data.ga_settings[input.name] = Number(input.value);
+        }
+
+        const response = await fetch(
+            "{% url 'scheduler:schedule_monitor_api' schedule.pk %}",
+            {
+                'method': 'PATCH', 
+                'body': JSON.stringify(data),
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{csrf_token}}',    
+                }
+            }
+        );
+    }
+
+    const saveSettings = async (e) => {
+        e.preventDefault();
+        await updateScheduleSettings();
+        const settingBtn = document.querySelector('#settingBtn');
+        const settingInputs = document.querySelectorAll('.settingInput');
+
+        for (const input of settingInputs) {
+            input.disabled = true;
+        }
+
+        settingBtn.classList.add('btn-primary');
+        settingBtn.classList.remove('btn-success');
+        settingBtn.innerHTML = 'Edit';
+        settingBtn.removeEventListener('click', saveSettings)
+        settingBtn.addEventListener('click', editSettings);
+    }
+
+    const editSettings = (e) => {
+        e.preventDefault();
+        const settingBtn = document.querySelector('#settingBtn');
+        const settingInputs = document.querySelectorAll('.settingInput');
+
+        for (const input of settingInputs) {
+            input.disabled = false;
+        }
+
+        settingBtn.classList.remove('btn-primary');
+        settingBtn.classList.add('btn-success');
+        settingBtn.innerHTML = 'Save';
+        settingBtn.removeEventListener('click', editSettings);
+        settingBtn.addEventListener('click', saveSettings);
+    } 
+
+    const retrieveScheduleUpdate = async () => {
+        const response = await fetch("{% url 'scheduler:schedule_monitor_api' schedule.pk %}");
+        const data = await response.json();
+        const processContainer = document.querySelector('#process_container');
+
+        if (data.status !== 0) {
+            // redirect to result page 
+            window.location.assign("{% url 'scheduler:schedule_result' schedule.pk %}")
+        }
+
+        if (data.schedulelog) {
+            // update 
+            processContainer.innerHTML = `
+                <div class="text-muted text-center">
+                    <p class="text-muted">
+                        Intial Conflict Score: ${data.schedulelog.initial_conflict_score} 
+                    </p>
+                    <p>Current Conflict Score: ${data.schedulelog.current_conflict_score}</p>
+                </div>
+                <div class="my-auto mx-auto text-center" id="process_container">
+                    <div class="spinner-grow" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted">Scheduling...</p>
+                </div>
+                <div>
+                    <p id="hint" class="text-center text-muted">Hints: </p>
+                </div>
+                <button id="cancleBtn" class="btn btn-warning col-2 mx-auto">Stop</button>
+            `
+            const cancleBtn = document.querySelector('#cancleBtn');
+            cancleBtn.addEventListener('click', () => stopSchedule());
+        } else {
+            processContainer.innerHTML = `
+                <div class="my-auto mx-auto text-center" >
+                <div class="spinner-grow" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                    <p class="text-muted">Analysing problem please wait...</p>
+                </div>
+                <div>
+                    <p id="hint" class="text-center text-muted">Hints: </p>
+                </div>
+                <button id="cancleBtn" class="btn btn-secondary col-2 mx-auto">Cancle Schedule</button>
+            `
+            const cancleBtn = document.querySelector('#cancleBtn');
+            cancleBtn.addEventListener('click', () => cancleSchedule());
+        }
+    }
+
+    window.addEventListener('load', () => {
+        setInterval(retrieveScheduleUpdate, 2000);
+        document.querySelector('#settingBtn').addEventListener('click', editSettings);
+    })
+</script>
+{% endblock inline_javascript %}

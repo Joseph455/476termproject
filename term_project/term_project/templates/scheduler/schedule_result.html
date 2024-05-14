@@ -1,0 +1,109 @@
+{% extends "base.html" %} 
+{% load static i18n compress %}
+
+
+{% block content %}
+<header class="d-flex flex-row justify-content-between align-content-between">
+    <span>
+        <h1 class="text-left my-5">Schedule Result: <i class="text-muted">{{schedule.title}} </i></h1>
+    </span>
+    <span class="my-auto">
+        <p class="text-muted fs-5">created by: {{schedule.created_by.name}}</p>
+        <p class="text-muted">created at: {{schedule.date_created}}</p>
+        
+        {% if schedule.status == schedule.SCHEDULE_STATUS_DONE %}
+            <span class="badge rounded-pill text-bg-success">{{schedule.get_status_display}}</span>
+        {% elif schedule.status == schedule.SCHEDULE_STATUS_STOPPED %}
+            <span class="badge rounded-pill text-bg-danger">{{schedule.get_status_display}}</span>
+        {% elif schedule.status == schedule.SCHEDULE_STATUS_CANCLED %}
+            <span class="badge rounded-pill text-bg-dark">{{schedule.get_status_display}}</span>
+        {% endif %}
+    </span>
+</header>
+
+<section>
+    <div class="card text-center mt-5">
+        <div class="card-header">
+          TimeTable
+        </div>
+        <div class="card-body">
+            {% if not schedule.schedulelog and schedule.status != schedule.SCHEDULE_STATUS_DONE %}
+                <div class="h-100 w-100 d-flex">
+                    <div class="mx-auto my-auto">
+                        <h1>Nothing to display </h1>
+                        {% if schedule.status == schedule.SCHEDULE_STATUS_PROCESSING %}
+                            <p>Schedule is still processing </p>
+                        {% else %}
+                            <p>TimeTable was {{schedule.get_status_display}}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+            <table id="data-table" class="table table-striped">
+                <thead id="table-head">
+                    <tr>
+                        <th>Date</th>
+                        {% for period in periods %}
+                        <th>{{period.start_time}} : {{period.end_time}}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock content %}
+
+
+{% block inline_javascript %}
+<script>
+
+    
+    const data = JSON.parse('{{schedule.final_result|escapejs}}'.replaceAll(`'`, `"`));
+
+    let tableData = {};
+    let periods = new Set();
+    let dates = new Set();
+
+    for (let course in data) {
+        for (let date in data[course]) {
+            if (!tableData[date]) {
+                tableData[date] = {};
+                dates.add(date);
+            }
+            for (let code in data[course][date]) {
+                let period = data[course][date][code][0];
+                periods.add(period);
+                if (!tableData[date][period]) {
+                    tableData[date][period] = [];
+                }
+                tableData[date][period].push(course + ' at ' + code);
+            }
+        }
+    }
+
+    let tableHead = document.querySelector('#table-head tr');
+    let tableBody = document.querySelector('#table-body');
+
+    for (let date of Array.from(dates).sort()) {
+        const tr = document.createElement('tr');
+        const tdDate = document.createElement('td');
+        tdDate.innerHTML = date;
+        tr.appendChild(tdDate);
+
+        for (let period of Array.from(periods).sort()) {
+            const tdPeriodSchedules = document.createElement('td');
+            console.log(period)
+            console.log((tableData[date]))
+            tdPeriodSchedules.innerHTML = (tableData[date][period])? tableData[date][period].join('<br/>') : ''; 
+            tr.appendChild(tdPeriodSchedules);
+        }
+
+        tableBody.append(tr);
+    }
+</script>
+{% endblock inline_javascript %}
